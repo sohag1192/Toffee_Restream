@@ -1,0 +1,33 @@
+{
+    "name": "sohag1192/toffee-restream",
+    "description": "Toffee Live TV Restream & Modern Web Player",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0 || ^11.0"
+    },
+    "autoload": {
+        "files": [
+            "Toffee_Restream_PHP+RAM CACHE/toffee/playlist_manager.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --testdox",
+        "lint": [
+            "php -l \"Toffee_Restream_PHP+RAM CACHE/index.php\"",
+            "php -l \"Toffee_Restream_PHP+RAM CACHE/toffee.php\"",
+            "php -l \"Toffee_Restream_PHP+RAM CACHE/toffee/playlist_manager.php\""
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
