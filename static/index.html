@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toffee Live TV — Restream & Web Player</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- HLS.js for browser playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <div class="app-container" id="appContainer">
+    <!-- Navbar -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="15" rx="3" ry="3"></rect>
+            <polyline points="17 2 12 7 7 2"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Toffee <span>Live TV</span></h1>
+          <div class="brand-status-row">
+            <span class="live-dot" title="Server Online"></span>
+            <span class="badge" id="channelCountBadge">Loading...</span>
+            <span class="badge-sub" id="lastUpdatedBadge" style="display: none;"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Update / Refresh Button -->
+        <button id="refreshPlaylistBtn" class="btn btn-secondary" title="Fetch latest channels from upstream sources">
+          <svg class="icon-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span class="btn-text">Update Playlist</span>
+        </button>
+
+        <!-- Copy M3U Button -->
+        <button id="copyM3uBtn" class="btn btn-secondary" title="Copy M3U URL for VLC or IPTV players">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span class="btn-text">Copy M3U</span>
+        </button>
+
+        <!-- Download M3U Button -->
+        <a id="downloadM3uBtn" href="/playlist.m3u" download="toffee_playlist.m3u" class="btn btn-secondary" title="Download M3U Playlist file">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span class="btn-text">Download M3U</span>
+        </a>
+
+        <!-- Setup Guide Button -->
+        <button id="openGuideBtn" class="btn btn-primary" title="Smart TV, VLC & IPTV Setup Guide">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span class="btn-text">Setup Guide</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="main-layout" id="mainLayout">
+      <!-- Left Column: Video Player & Controls -->
+      <section class="player-section" id="playerSection">
+        <div class="player-wrapper" id="playerWrapper">
+          <div class="ambient-glow" id="ambientGlow"></div>
+          <video id="videoPlayer" playsinline></video>
+
+          <!-- Autoplay Blocker Banner -->
+          <div id="autoplayBanner" class="autoplay-banner" style="display: none;">
+            <span>🔊 Audio autoplay blocked by browser</span>
+            <button id="unmuteBtn" class="btn btn-sm btn-primary">Click to Unmute</button>
+          </div>
+
+          <!-- Video Loading Overlay -->
+          <div id="videoSpinner" class="video-spinner-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <p id="spinnerText">Loading stream...</p>
+          </div>
+
+          <!-- Placeholder when no channel is playing -->
+          <div id="playerPlaceholder" class="player-placeholder">
+            <div class="placeholder-icon-wrap">
+              <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </div>
+            <h3>Ready to Stream</h3>
+            <p>Select any live channel from the browser below</p>
+            <div class="shortcut-pills">
+              <span><kbd>/</kbd> Search</span>
+              <span><kbd>Space</kbd> Play/Pause</span>
+              <span><kbd>F</kbd> Fullscreen</span>
+              <span><kbd>T</kbd> Theater</span>
+            </div>
+          </div>
+
+          <!-- Player Controls Bar -->
+          <div class="custom-player-controls" id="playerControls">
+            <div class="controls-left">
+              <button id="playPauseBtn" class="control-btn" title="Play / Pause (Space)">
+                <svg id="playIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <svg id="pauseIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+              </button>
+
+              <div class="live-indicator-pill">
+                <span class="live-indicator-dot"></span>
+                <span>LIVE</span>
+              </div>
+
+              <!-- Volume Control -->
+              <div class="volume-container">
+                <button id="muteBtn" class="control-btn" title="Mute / Unmute (M)">
+                  <svg id="volumeHighIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                  <svg id="volumeMutedIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                </button>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="volume-slider" title="Volume">
+              </div>
+            </div>
+
+            <div class="controls-right">
+              <!-- Quality Selector Dropdown -->
+              <div class="quality-dropdown-wrapper">
+                <button id="qualityBtn" class="control-btn-text" title="Video Quality">
+                  <span id="qualityText">Auto</span>
+                </button>
+                <div id="qualityMenu" class="quality-menu" style="display: none;">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+
+              <!-- Reload Stream -->
+              <button id="resyncBtn" class="control-btn" title="Resync / Reload Stream (R)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+              </button>
+
+              <!-- Theater Mode -->
+              <button id="theaterBtn" class="control-btn" title="Theater Mode (T)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <path d="M7 10h10"></path>
+                </svg>
+              </button>
+
+              <!-- Picture-in-Picture -->
+              <button id="pipBtn" class="control-btn" title="Picture in Picture (P)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <rect x="12" y="10" width="8" height="8" rx="1"></rect>
+                </svg>
+              </button>
+
+              <!-- Fullscreen -->
+              <button id="fullscreenBtn" class="control-btn" title="Fullscreen (F)">
+                <svg id="fullscreenEnterIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+                <svg id="fullscreenExitIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Now Playing Card -->
+        <div class="now-playing-card" id="nowPlayingCard" style="display: none;">
+          <div class="channel-logo-wrap">
+            <img id="nowPlayingLogo" src="" alt="Channel Logo" class="channel-logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\'><rect x=\'2\' y=\'7\' width=\'20\' height=\'15\' rx=\'2\' ry=\'2\'></rect><polyline points=\'17 2 12 7 7 2\'></polyline></svg>'">
+            <!-- Animated Equalizer Bars -->
+            <div class="sound-equalizer" id="soundEqualizer">
+              <span class="bar bar-1"></span>
+              <span class="bar bar-2"></span>
+              <span class="bar bar-3"></span>
+            </div>
+          </div>
+
+          <div class="now-playing-info">
+            <div class="now-playing-title-row">
+              <h2 id="nowPlayingTitle">Channel Name</h2>
+              <!-- Favorite Button -->
+              <button id="toggleFavoriteNowPlayingBtn" class="star-btn" title="Add to Favorites">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              </button>
+            </div>
+
+            <div class="meta-tags">
+              <span id="nowPlayingGroup" class="category-tag">Category</span>
+              <span id="nowPlayingChannelId" class="id-tag">CH #1</span>
+              <span id="nowPlayingStatus" class="status-tag">Ready</span>
+            </div>
+          </div>
+
+          <div class="now-playing-actions">
+            <button id="copyStreamUrlBtn" class="btn btn-sm btn-outline" title="Copy Direct HLS Stream Link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Stream
+            </button>
+            <a id="vlcLinkBtn" href="#" class="btn btn-sm btn-outline" title="Open Stream directly in VLC player">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Play in VLC
+            </a>
+          </div>
+        </div>
+
+        <!-- Smart TV / VLC Network Info Box -->
+        <div class="network-info-box">
+          <div class="info-header">
+            <div class="info-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+              <span>Smart TV & VLC Playlist URL</span>
+            </div>
+            <button id="copyBoxM3uBtn" class="copy-pill-btn">Copy Link</button>
+          </div>
+          <div class="info-body">
+            <code id="playlistUrlText">http://localhost:8081/playlist.m3u</code>
+          </div>
+          <p class="info-hint">💡 Load this URL into <strong>VLC</strong>, <strong>TiviMate</strong>, <strong>IPTV Smarters</strong>, or <strong>Smart TV</strong>. Includes auto AES-128 decryption proxy and CORS bypass.</p>
+        </div>
+      </section>
+
+      <!-- Right Column: Channel Browser Section -->
+      <section class="channels-section" id="channelsSection">
+        <div class="channels-controls">
+          <!-- Search Box & View Switcher -->
+          <div class="search-row">
+            <div class="search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="searchInput" placeholder="Search 80+ channels (e.g. T Sports, Somoy, Sony, Movies)..." autocomplete="off">
+              <button id="clearSearchBtn" class="clear-search-btn" title="Clear search" style="display: none;">✕</button>
+              <span class="search-shortcut-hint">/</span>
+            </div>
+
+            <!-- View Mode Switcher (Grid / List) -->
+            <div class="view-mode-toggle">
+              <button id="gridViewBtn" class="view-btn active" title="Grid View">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </button>
+              <button id="listViewBtn" class="view-btn" title="List View">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="groups-filter-wrapper">
+            <button id="filterScrollLeft" class="scroll-arrow-btn" aria-label="Scroll left">‹</button>
+            <div class="groups-filter" id="groupsFilterContainer">
+              <!-- Filter pills generated dynamically -->
+            </div>
+            <button id="filterScrollRight" class="scroll-arrow-btn" aria-label="Scroll right">›</button>
+          </div>
+        </div>
+
+        <!-- Channels Grid / Container -->
+        <div class="channels-grid" id="channelsGrid">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading channels from upstream playlist...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Setup Guide Modal -->
+    <div id="guideModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="brand-logo-icon small">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="15" rx="3"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+            </div>
+            <h2>Smart TV & Player Setup Guide</h2>
+          </div>
+          <button id="closeGuideBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="guide-item">
+            <div class="guide-badge">VLC Media Player</div>
+            <p>Open VLC &rarr; <strong>Media</strong> &rarr; <strong>Open Network Stream (Ctrl+N)</strong> &rarr; Paste:</p>
+            <div class="guide-code-box">
+              <code class="guide-m3u-url">http://localhost:8081/playlist.m3u</code>
+              <button class="btn btn-sm btn-outline copy-guide-url">Copy</button>
+            </div>
+          </div>
+
+          <div class="guide-item">
+            <div class="guide-badge">Android TV / TiviMate / FireStick</div>
+            <p>In <strong>TiviMate</strong> or <strong>OTT Navigator</strong> &rarr; Add Playlist &rarr; Select <strong>M3U Playlist</strong> &rarr; Enter URL (use host PC LAN IP, e.g. <code>http://192.168.1.X:8081/playlist.m3u</code>).</p>
+          </div>
+
+          <div class="guide-item">
+            <div class="guide-badge">Apple TV / iPhone / iPad</div>
+            <p>Use <strong>IPTVX</strong>, <strong>Smarters Player Lite</strong>, or <strong>VLC for iOS</strong> &rarr; Open Network Stream &rarr; Paste M3U URL.</p>
+          </div>
+
+          <div class="guide-item">
+            <div class="guide-badge">Direct Channel Stream</div>
+            <p>Every channel has a direct M3U8 endpoint: <code>/channel/{id}.m3u8</code> (e.g. <code>http://localhost:8081/channel/1.m3u8</code>).</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="guideCloseBtn2" class="btn btn-secondary">Close Guide</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+      <div class="toast-content">
+        <span id="toastIcon" class="toast-icon">✓</span>
+        <span id="toastMessage">Link copied to clipboard!</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

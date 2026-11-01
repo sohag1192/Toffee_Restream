@@ -1,0 +1,32 @@
+AcceptPathInfo On
+Options -Indexes +FollowSymLinks
+
+<FilesMatch "^\.|\.env">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+DirectoryIndex index.php toffee.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Block direct access to storage folder
+    RewriteRule ^toffee/storage(?:/|$) - [F,L]
+    RewriteRule ^storage(?:/|$) - [F,L]
+
+    # Allow existing files and directories to be served directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Route all other requests to index.php (or toffee.php)
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+    Header set Access-Control-Allow-Headers "*"
+    Header set Access-Control-Expose-Headers "Content-Length, Content-Range, X-Proxy-Cache, X-Stream-Recovery"
+</IfModule>
