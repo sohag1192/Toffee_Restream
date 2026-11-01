@@ -1,34 +1,32 @@
-# 📺 Toffee Live TV Restream & Modern Web Player
+# 📺 Toffee Live TV Restream & Web Player (PHP Edition)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/PHP-8.1+-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP">
+  <img src="https://img.shields.io/badge/Composer-Ready-885630?style=flat-square&logo=composer&logoColor=white" alt="Composer">
+  <img src="https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white" alt="CI">
   <img src="https://img.shields.io/badge/AES--128-Decrypted-brightgreen?style=flat-square" alt="AES-128">
-  <a href="https://hits.seeyoufarm.com"><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fsrhady%2Ftoffee-restream&count_bg=%23E11D48&title_bg=%231E293B&icon=&icon_color=%23E7E7E7&title=Views&edge_flat=true" alt="Hit Counter"/></a>
-  <img src="https://api.visitorbadge.io/api/visitors?pageUrl=https%3A%2F%2Fgithub.com%2Fsrhady%2Ftoffee-restream&label=VISITORS&countColor=%23e11d48&style=flat-square" alt="Visitors"/>
 </p>
 
-High-performance dedicated Restream Proxy, Auto-Decryption Engine, and Modern Dark-Theme Web Player for Toffee BD Live TV channels.
+High-performance, standalone **PHP-based** Restream Proxy, Auto-Decryption Engine, and Modern Web Player for Toffee BD Live TV channels.
 
 ---
 
-## ⚡ Features & Updates
+## ⚡ Features
 
+- **🐘 Pure PHP Architecture**: 100% PHP with zero Python dependencies.
+- **⚡ In-Memory RAM Caching**: High-performance segment caching using `/dev/shm` or temporary memory.
 - **✨ Modern Web Player Interface**:
   - Deep space OLED dark theme with glassmorphism and ambient backlighting.
-  - **Dynamic Quality Switcher**: Select between Auto, 1080p, 720p, 480p, etc. directly inside the player.
+  - **Quality Selector**: Switch between Auto, 1080p, 720p, 480p, etc. directly in the player.
   - **Theater Mode & PiP**: Expand player full-width (`T`) or watch in floating Picture-in-Picture window (`P`).
   - **Favorites & Recents**: Bookmark favorite channels (`⭐`) with persistent local storage.
-  - **View Modes**: Switch between responsive Grid Cards and Compact List mode.
+  - **View Modes**: Switch between Grid Cards and Compact List mode.
   - **Animated Equalizer**: Live audio wave visualizer when stream is playing.
-  - **Volume & Audio Memory**: Preserves volume and mute settings across sessions.
 - **🔄 Live Playlist Updater**:
-  - 1-Click **"Update Playlist"** button directly on the webpage to fetch fresh tokens from upstream.
-  - Added dedicated `/api/refresh` REST endpoint.
-- **🛡️ Multi-Source Playlist Merging & Fallback**:
-  - Merges channels and token streams across 3 reliable upstream repositories.
-  - Automatic stream retry & token recovery on HTTP 401/403/410.
+  - Dedicated `/api/refresh` REST endpoint to fetch fresh tokens from upstream.
+  - Multi-source playlist merging with auto-fallback across 3 upstream repositories.
 - **🔐 AES-128 Key Decryption Proxy**:
-  - Transparently proxies AES-128 encryption keys with proper CORS headers so browsers and players can decrypt live feeds seamlessly.
+  - Automatically proxies AES-128 encryption keys with proper CORS headers so browsers and players can decrypt live feeds seamlessly.
 - **📺 Smart TV & VLC Ready**:
   - Generates proxied M3U playlist link at `http://<IP>:8081/playlist.m3u` compatible with VLC, TiviMate, OTT Navigator, IPTV Smarters, and Smart TVs.
 
@@ -52,15 +50,27 @@ High-performance dedicated Restream Proxy, Auto-Decryption Engine, and Modern Da
 ## 🚀 How to Run
 
 ### Windows
-Double-click `start_server.bat` or run in terminal:
+Double-click `start_server.bat` or run:
 ```powershell
-python run_server.py --port 8081
+php -S 0.0.0.0:8081 index.php
 ```
 
-### Linux / Ubuntu
+### Linux / macOS
 ```bash
-chmod +x install.sh
-./install.sh
+php -S 0.0.0.0:8081 index.php
+```
+
+### Apache / Nginx / cPanel
+Upload the repository files to your web root (`public_html`). The included `.htaccess` file handles URL routing and CORS headers automatically.
+
+---
+
+## 🧪 Testing & CI
+
+Run syntax checks and tests with Composer:
+```bash
+composer lint
+composer test
 ```
 
 ---

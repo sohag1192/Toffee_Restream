@@ -5,6 +5,14 @@ error_reporting(0);
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
 
+if (php_sapi_name() === 'cli-server') {
+    $rawReqPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $diskFile = __DIR__ . $rawReqPath;
+    if ($rawReqPath !== '/' && is_file($diskFile) && !str_ends_with($diskFile, '.php')) {
+        return false;
+    }
+}
+
 /**
  * ============================================================================
  * TOFFEE LIVE RESTREAM & WEB PLAYER - FULL STANDALONE PHP EDITION (WITH RAM CACHE)
@@ -91,8 +99,10 @@ function appPath(string $requestPath): string
         $requestPath = substr($requestPath, strlen($basePath));
     }
 
-    if (str_starts_with($requestPath, '/' . $scriptBasename)) {
-        $requestPath = substr($requestPath, strlen('/' . $scriptBasename));
+    if (in_array(strtolower($scriptBasename), ['index.php', 'toffee.php'], true)) {
+        if (str_starts_with($requestPath, '/' . $scriptBasename)) {
+            $requestPath = substr($requestPath, strlen('/' . $scriptBasename));
+        }
     } elseif (str_starts_with($requestPath, '/index.php')) {
         $requestPath = substr($requestPath, strlen('/index.php'));
     } elseif (str_starts_with($requestPath, '/toffee.php')) {
@@ -1515,6 +1525,11 @@ if (in_array($path, ['/toffee/style.css', '/static/style.css'], true)) {
     header('Content-Type: text/css; charset=utf-8');
     header('Cache-Control: public, max-age=86400');
     sendCorsHeaders();
+    $diskCss = __DIR__ . '/static/style.css';
+    if (is_file($diskCss) && is_readable($diskCss)) {
+        readfile($diskCss);
+        exit;
+    }
     echo <<<'EMBEDDED_CSS'
 :root {
   --bg-primary: #0b0f19;
@@ -2068,6 +2083,11 @@ if (in_array($path, ['/toffee/app.js', '/static/app.js'], true)) {
     header('Content-Type: application/javascript; charset=utf-8');
     header('Cache-Control: public, max-age=86400');
     sendCorsHeaders();
+    $diskJs = __DIR__ . '/static/app.js';
+    if (is_file($diskJs) && is_readable($diskJs)) {
+        readfile($diskJs);
+        exit;
+    }
     echo <<<'EMBEDDED_JS'
 let allChannels = [];
 let channelDisplayNumbers = new Map();
@@ -2365,6 +2385,11 @@ try {
         header('Content-Type: text/html; charset=utf-8');
         header('Cache-Control: no-cache, no-store, must-revalidate');
         $baseHref = htmlspecialchars(rtrim($baseUrl, '/') . '/', ENT_QUOTES, 'UTF-8');
+        $diskHtml = __DIR__ . '/static/index.html';
+        if (is_file($diskHtml) && is_readable($diskHtml)) {
+            echo file_get_contents($diskHtml);
+            exit;
+        }
         ?>
 <!DOCTYPE html>
 <html lang="en">

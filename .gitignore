@@ -1,13 +1,14 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-
 # Composer / PHP
 /vendor/
 /composer.phar
 .phpunit.cache/
 .phpunit.result.cache
+
+# App cache & storage
+storage/
+toffee/storage/
+*.m3u
+*.m3u8
 
 # Temp & OS
 .DS_Store
