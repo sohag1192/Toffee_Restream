@@ -1,0 +1,102 @@
+name: Auto Release & Package
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, Tag & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate Next Version Tag
+        id: version
+        run: |
+          # Fetch all remote tags
+          git fetch --tags || true
+
+          # Find highest existing semver tag
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "Current latest tag: $LATEST_TAG"
+
+          # Strip leading 'v'
+          RAW_VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$RAW_VERSION"
+          MAJOR=${MAJOR:-0}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
+
+          BUMP="${{ github.event.inputs.version_type || 'patch' }}"
+
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            NEW_TAG="v1.0.0"
+          elif [ "$BUMP" = "major" ]; then
+            NEW_TAG="v$((MAJOR + 1)).0.0"
+          elif [ "$BUMP" = "minor" ]; then
+            NEW_TAG="v${MAJOR}.$((MINOR + 1)).0"
+          else
+            NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          echo "Calculated new version: $NEW_TAG"
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Package Clean PHP ZIP Archive
+        run: |
+          mkdir -p build_pkg
+          # Copy deployment files
+          cp index.php .htaccess composer.json composer.lock phpunit.xml README.md start_server.bat build_pkg/
+          cp -r src build_pkg/
+          cp -r static build_pkg/
+
+          # Create zip
+          cd build_pkg
+          zip -r ../Toffee_Restream_PHP.zip .
+          cd ..
+          rm -rf build_pkg
+          ls -lh Toffee_Restream_PHP.zip
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Toffee Restream ${{ steps.version.outputs.tag }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: Toffee_Restream_PHP.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
